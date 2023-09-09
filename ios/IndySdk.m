@@ -41,6 +41,10 @@ RCT_EXTERN_METHOD(sampleMethod: (NSString *)stringArgument numberArgument:(nonnu
                   resolver:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 
+RCT_EXTERN_METHOD(addArray: (nonnull NSNumber *)arrayId array:(NSArray *)array
+                  resolver:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
+
 // wallet
 RCT_EXTERN_METHOD(createWallet: (NSString *)config credentials:(NSString *)credentials
                   resolver:(RCTPromiseResolveBlock)resolve
@@ -102,7 +106,7 @@ RCT_EXTERN_METHOD(cryptoAnonCrypt: (NSString *)message theirKey:(NSString *)thei
                   resolver:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 
-RCT_EXTERN_METHOD(cryptoAnonDecrypt: (NSArray *)encryptedMessage myKey:(NSString *)myKey walletHandle:(nonnull NSNumber *)walletHandle
+RCT_EXTERN_METHOD(cryptoAnonDecrypt: (nonnull NSNumber *)encryptedMessage myKey:(NSString *)myKey walletHandle:(nonnull NSNumber *)walletHandle
                   resolver:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 
@@ -113,26 +117,26 @@ RCT_EXTERN_METHOD(cryptoAuthCrypt: (NSString *)message
                   resolver:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 
-RCT_EXTERN_METHOD(cryptoAuthDecrypt: (NSArray *)encryptedMessage myKey:(NSString *)myKey walletHandle:(nonnull NSNumber *)walletHandle
+RCT_EXTERN_METHOD(cryptoAuthDecrypt: (nonnull NSNumber *)encryptedMessage myKey:(NSString *)myKey walletHandle:(nonnull NSNumber *)walletHandle
                   resolver:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 
 RCT_EXTERN_METHOD(cryptoSign: (nonnull NSNumber *)wh
                   signerVk: (NSString *)signerVk
-                  message: (NSArray *)message
+                  message: (nonnull NSNumber *)message
                   resolver:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject
                   )
 
 RCT_EXTERN_METHOD(cryptoVerify: (NSString *)signerVk
-                  message: (NSArray *)message
-                  signature: (NSArray *)signature
+                  message: (nonnull NSNumber *)message
+                  signature: (nonnull NSNumber *)signature
                   resolver:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject
                   )
 
 RCT_EXTERN_METHOD(packMessage: (nonnull NSNumber *)wh
-                  message: (NSArray *)message
+                  message: (nonnull NSNumber *)message
                   receiverKeys: (NSString *)receiverKeys
                   senderVk: (NSString *)senderVk
                   resolver:(RCTPromiseResolveBlock)resolve
@@ -140,7 +144,7 @@ RCT_EXTERN_METHOD(packMessage: (nonnull NSNumber *)wh
                   )
 
 RCT_EXTERN_METHOD(unpackMessage: (nonnull NSNumber *)wh
-                  jwe: (NSArray *)jwe
+                  jwe: (nonnull NSNumber *)jwe
                   resolver:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject
                   )

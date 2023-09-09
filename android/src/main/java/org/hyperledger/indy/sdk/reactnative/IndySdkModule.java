@@ -28,7 +28,6 @@ import com.facebook.react.bridge.ReadableArray;
 import com.facebook.react.bridge.WritableArray;
 import com.facebook.react.bridge.WritableNativeArray;
 import com.google.gson.Gson;
-import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
 import org.hyperledger.indy.sdk.IndyException;
@@ -52,6 +51,8 @@ import org.hyperledger.indy.sdk.pool.Pool;
 import org.hyperledger.indy.sdk.wallet.Wallet;
 import org.hyperledger.indy.sdk.anoncreds.CredentialsSearchForProofReq;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
@@ -81,6 +82,66 @@ public class IndySdkModule extends ReactContextBaseJavaModule {
     @Override
     public String getName() {
         return "IndySdk";
+    }
+
+    private Map<Integer, String> strings = new ConcurrentHashMap<>();
+
+    @ReactMethod(isBlockingSynchronousMethod = true)
+    public void addString(Integer stringId, String string){
+        String newString = string;
+        if(strings.containsKey(stringId)){
+            String current = strings.get(stringId);
+            assert current != null;
+            newString = current.concat(string);
+        }
+
+        strings.put(stringId, newString);
+    }
+
+    private String fetchString(Integer stringId){
+        String str = strings.get(stringId);
+        strings.remove(stringId);
+        return str;
+    }
+
+    private Map<Integer, byte[]> arrays = new ConcurrentHashMap<>();
+
+    @ReactMethod(isBlockingSynchronousMethod = true)
+    public void addArray(Integer arrayId, ReadableArray array){
+        byte[] newArray = _readableArrayToBuffer(array);
+        if(arrays.containsKey(arrayId)){
+            byte[] current = arrays.get(arrayId);
+            assert current != null;
+
+            int arrSize = current.length + newArray.length;
+            byte[] tempArr = new byte[arrSize];
+
+            for(int i = 0; i < arrSize; i++){
+                if(i < current.length){
+                    tempArr[i] = current[i];
+                }else{
+                    tempArr[i] = newArray[i - current.length];
+                }
+            }
+
+            newArray = tempArr;
+        }
+
+        arrays.put(arrayId, newArray);
+    }
+
+    private byte[] fetchArray(Integer arrayId){
+        byte[] arr = arrays.get(arrayId);
+        arrays.remove(arrayId);
+        return arr;
+    }
+
+    private byte[] _readableArrayToBuffer(ReadableArray arr) {
+        byte[] buffer = new byte[arr.size()];
+        for (int i = 0; i < arr.size(); i++) {
+            buffer[i] = (byte) arr.getInt(i);
+        }
+        return buffer;
     }
 
     // wallet
@@ -270,14 +331,6 @@ public class IndySdkModule extends ReactContextBaseJavaModule {
 
     // crypto
 
-    private byte[] readableArrayToBuffer(ReadableArray arr) {
-        byte[] buffer = new byte[arr.size()];
-        for (int i = 0; i < arr.size(); i++) {
-            buffer[i] = (byte) arr.getInt(i);
-        }
-        return buffer;
-    }
-
     @ReactMethod
     public void createKey(int walletHandle, String key, Promise promise) {
         try {
@@ -291,9 +344,9 @@ public class IndySdkModule extends ReactContextBaseJavaModule {
     }
 
     @ReactMethod
-    public void cryptoAnonCrypt(String theirKey, ReadableArray message, Promise promise) {
+    public void cryptoAnonCrypt(String theirKey, int message, Promise promise) {
         try {
-            byte[] buffer = readableArrayToBuffer(message);
+            byte[] buffer = fetchArray(message);
             byte[] encryptedData = Crypto.anonCrypt(theirKey, buffer).get();
             WritableArray result = new WritableNativeArray();
             for (byte b : encryptedData) {
@@ -307,9 +360,9 @@ public class IndySdkModule extends ReactContextBaseJavaModule {
     }
 
     @ReactMethod
-    public void cryptoAnonDecrypt(int walletHandle, String recipientVk, ReadableArray encryptedMessage, Promise promise) {
+    public void cryptoAnonDecrypt(int walletHandle, String recipientVk, int encryptedMessage, Promise promise) {
         try {
-            byte [] encryptedMessageBytes = readableArrayToBuffer(encryptedMessage);
+            byte [] encryptedMessageBytes = fetchArray(encryptedMessage);
             Wallet wallet = walletMap.get(walletHandle);
             byte[] decryptedData = Crypto.anonDecrypt(wallet, recipientVk, encryptedMessageBytes).get();
             promise.resolve(decryptedData);
@@ -321,9 +374,9 @@ public class IndySdkModule extends ReactContextBaseJavaModule {
 
     @ReactMethod
     @Deprecated
-    public void cryptoAuthCrypt(int walletHandle, String senderVk, String recipientVk, ReadableArray message, Promise promise) {
+    public void cryptoAuthCrypt(int walletHandle, String senderVk, String recipientVk, int message, Promise promise) {
         try {
-            byte[] buffer = readableArrayToBuffer(message);
+            byte[] buffer = fetchArray(message);
             Wallet wallet = walletMap.get(walletHandle);
             byte[] encryptedData = Crypto.authCrypt(wallet, senderVk, recipientVk, buffer).get();
             WritableArray result = new WritableNativeArray();
@@ -339,9 +392,9 @@ public class IndySdkModule extends ReactContextBaseJavaModule {
 
     @ReactMethod
     @Deprecated
-    public void cryptoAuthDecrypt(int walletHandle, String recipientVk, ReadableArray encryptedMessage, Promise promise) {
+    public void cryptoAuthDecrypt(int walletHandle, String recipientVk, int encryptedMessage, Promise promise) {
         try {
-            byte[] encryptedMessageBytes = readableArrayToBuffer(encryptedMessage);
+            byte[] encryptedMessageBytes = fetchArray(encryptedMessage);
             Wallet wallet = walletMap.get(walletHandle);
             CryptoResults.AuthDecryptResult decryptedResult = Crypto.authDecrypt(wallet, recipientVk, encryptedMessageBytes).get();
             String theirKey = decryptedResult.getVerkey();
@@ -362,10 +415,10 @@ public class IndySdkModule extends ReactContextBaseJavaModule {
     }
 
     @ReactMethod
-    public void cryptoSign(int walletHandle, String signerVk, ReadableArray messageRaw, Promise promise) {
+    public void cryptoSign(int walletHandle, String signerVk, int messageRaw, Promise promise) {
         try {
             Wallet wallet = walletMap.get(walletHandle);
-            byte[] buffer = readableArrayToBuffer(messageRaw);
+            byte[] buffer = fetchArray(messageRaw);
             byte[] signature = Crypto.cryptoSign(wallet, signerVk, buffer).get();
             WritableArray result = new WritableNativeArray();
             for (byte b : signature) {
@@ -379,10 +432,10 @@ public class IndySdkModule extends ReactContextBaseJavaModule {
     }
 
     @ReactMethod
-    public void cryptoVerify(String signerVk, ReadableArray messageRaw, ReadableArray signatureRaw, Promise promise) {
+    public void cryptoVerify(String signerVk, int messageRaw, int signatureRaw, Promise promise) {
         try {
-            byte[] messageBuf = readableArrayToBuffer(messageRaw);
-            byte[] sigBuf = readableArrayToBuffer(signatureRaw);
+            byte[] messageBuf = fetchArray(messageRaw);
+            byte[] sigBuf = fetchArray(signatureRaw);
             boolean valid = Crypto.cryptoVerify(signerVk, messageBuf, sigBuf).get();
 
             promise.resolve(valid);
@@ -394,10 +447,10 @@ public class IndySdkModule extends ReactContextBaseJavaModule {
 
 
     @ReactMethod
-    public void packMessage(int walletHandle, ReadableArray message, ReadableArray receiverKeys, String senderVk, Promise promise) {
+    public void packMessage(int walletHandle, int message, ReadableArray receiverKeys, String senderVk, Promise promise) {
         try {
             Wallet wallet = walletMap.get(walletHandle);
-            byte[] buffer = readableArrayToBuffer(message);
+            byte[] buffer = fetchArray(message);
 
             String[] keys = new String[receiverKeys.size()];
             for (int i = 0; i < receiverKeys.size(); i++) {
@@ -419,10 +472,10 @@ public class IndySdkModule extends ReactContextBaseJavaModule {
     }
 
     @ReactMethod
-    public void unpackMessage(int walletHandle, ReadableArray jwe, Promise promise) {
+    public void unpackMessage(int walletHandle, int jwe, Promise promise) {
         try {
             Wallet wallet = walletMap.get(walletHandle);
-            byte[] buffer = readableArrayToBuffer(jwe);
+            byte[] buffer = fetchArray(jwe);
             byte[] res = Crypto.unpackMessage(wallet, buffer).get();
 
             WritableArray result = new WritableNativeArray();

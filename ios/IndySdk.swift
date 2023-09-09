@@ -27,6 +27,34 @@ class IndySdk : NSObject {
     private static var walletIdHandleDict: [String: Int32] = [:]
     private static var poolIdHandleDict: [String: Int32] = [:]
     
+    private static var arraysDict: [NSNumber: Array<Array<UInt8>>] = [:]
+    
+    @objc func addArray(_ arrayId: NSNumber, array: Array<UInt8>,
+                        resolver resolve: @escaping RCTPromiseResolveBlock,
+                        rejecter reject: @escaping RCTPromiseRejectBlock
+    ){
+        if var arr = IndySdk.arraysDict[arrayId] {
+                arr.append(array)
+                IndySdk.arraysDict[arrayId] = arr
+        } else {
+                IndySdk.arraysDict[arrayId] = [array]
+        }
+        resolve(nil)
+    }
+    
+    func getArray(_ arrayId: NSNumber) -> Data {
+        let res = IndySdk.arraysDict[arrayId];
+        IndySdk.arraysDict[arrayId] = nil;
+        return Data(res!.joined());
+    }
+    
+    func getArray(bytes: NSNumber) -> Data {
+        let arrayId = bytes;
+        let res = IndySdk.arraysDict[arrayId];
+        IndySdk.arraysDict[arrayId] = nil;
+        return Data(bytes: res!.joined());
+    }
+    
     @objc func sampleMethod(_ stringArgument: String, numberArgument: NSNumber,
                             resolver resolve: @escaping RCTPromiseResolveBlock,
                             rejecter reject: @escaping RCTPromiseRejectBlock) {
@@ -180,11 +208,11 @@ class IndySdk : NSObject {
       IndyCrypto.anonCrypt(messageData, theirKey: theirKey, completion: completionWithData(resolve, reject))
     }
     
-    @objc func cryptoAnonDecrypt(_ encryptedMessage: Array<UInt8>, myKey: String!, walletHandle: NSNumber,
+    @objc func cryptoAnonDecrypt(_ encryptedMessage: NSNumber, myKey: String!, walletHandle: NSNumber,
                                  resolver resolve: @escaping RCTPromiseResolveBlock,
                                  rejecter reject: @escaping RCTPromiseRejectBlock) -> Void {
       let whNumber:Int32  = Int32(truncating:walletHandle)
-      let encryptedMessageData = Data(bytes: encryptedMessage)
+        let encryptedMessageData = getArray(bytes: encryptedMessage)
       IndyCrypto.anonDecrypt(encryptedMessageData, myKey: myKey, walletHandle: whNumber, completion: completionWithData(resolve, reject))
     }
     
@@ -195,35 +223,35 @@ class IndySdk : NSObject {
       IndyCrypto.authCrypt(message.data(using: .utf8), myKey: myKey, theirKey: theirKey, walletHandle: whNumber, completion: completionWithData(resolve, reject))
     }
     
-    @objc func cryptoAuthDecrypt(_ encryptedMessage: Array<UInt8>, myKey: String!, walletHandle: NSNumber,
+    @objc func cryptoAuthDecrypt(_ encryptedMessage: NSNumber, myKey: String!, walletHandle: NSNumber,
                                  resolver resolve: @escaping RCTPromiseResolveBlock,
                                  rejecter reject: @escaping RCTPromiseRejectBlock) -> Void {
       let whNumber:Int32  = Int32(truncating:walletHandle)
       
-      IndyCrypto.authDecrypt(Data(bytes: encryptedMessage), myKey: myKey, walletHandle: whNumber, completion: completionWithTheirKeyAndData(resolve, reject))
+        IndyCrypto.authDecrypt(getArray(bytes: encryptedMessage), myKey: myKey, walletHandle: whNumber, completion: completionWithTheirKeyAndData(resolve, reject))
     }
     
-    @objc func cryptoSign(_ wh: NSNumber, signerVk: String, message: Array<UInt8>, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) -> Void {
+    @objc func cryptoSign(_ wh: NSNumber, signerVk: String, message: NSNumber, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) -> Void {
         let whNumber = Int32(truncating: wh)
-        let messageData = Data(message)
+        let messageData = getArray(message)
         IndyCrypto.signMessage(messageData, key: signerVk, walletHandle: whNumber, completion: completionWithData(resolve, reject))
     }
     
-    @objc func cryptoVerify(_ signerVk: String, message: Array<UInt8>, signature: Array<UInt8>, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) -> Void {
-        let messageData = Data(message)
-        let signatureData = Data(signature)
+    @objc func cryptoVerify(_ signerVk: String, message: NSNumber, signature: NSNumber, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) -> Void {
+        let messageData = getArray(message)
+        let signatureData = getArray(signature)
         IndyCrypto.verifySignature(signatureData, forMessage: messageData, key: signerVk, completion: completionWithBool(resolve, reject))
     }
     
-    @objc func packMessage(_ wh: NSNumber, message: Array<UInt8>, receiverKeys: String, senderVk: String?, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) -> Void {
+    @objc func packMessage(_ wh: NSNumber, message: NSNumber, receiverKeys: String, senderVk: String?, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) -> Void {
         let whNumber = Int32(truncating: wh)
-        let messageData = Data(message)
+        let messageData = getArray(message)
         IndyCrypto.packMessage(messageData, receivers: receiverKeys, sender: senderVk, walletHandle: whNumber, completion: completionWithData(resolve, reject))
     }
     
-    @objc func unpackMessage(_ wh: NSNumber, jwe: Array<UInt8>, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) -> Void {
+    @objc func unpackMessage(_ wh: NSNumber, jwe: NSNumber, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) -> Void {
         let whNumber = Int32(truncating: wh)
-        let jweData = Data(jwe)
+        let jweData = getArray(jwe)
         IndyCrypto.unpackMessage(jweData, walletHandle: whNumber, completion: completionWithData(resolve, reject))
     }
     

@@ -15,7 +15,7 @@
  *
  */
 
-import { NativeModules } from 'react-native'
+import { NativeEventEmitter, NativeModules } from 'react-native'
 import { Buffer } from 'buffer'
 
 export type CredOffer = {
@@ -288,6 +288,32 @@ export type GetNymResponse = {
 
 const { IndySdk } = NativeModules
 
+
+let currentId: number = 0;
+
+async function passString(string: string): number{
+  const id = currentId++
+  let _string = string
+  while(_string){
+    const pass = _string.substring(0,1000)
+    _string = _string.substring(1000)
+    await IndySdk.addString(id, pass)
+  }
+  return id
+}
+
+// Divide buffers up to 10,000 bytes to prevent malformed JS error on large buffers
+async function passBuffer(buff: Buffer): number{
+  const id = currentId++
+  let _arr = Array.from(buff)
+  while(_arr.length){
+    const pass = _arr.slice(0,10000)
+    _arr = _arr.slice(10000)
+    await IndySdk.addArray(id, pass)
+  }
+  return id
+}
+
 const indy = {
   // wallet
 
@@ -393,37 +419,37 @@ const indy = {
       return IndySdk.cryptoAnonCrypt(messageRaw, recipientVk)
     }
 
-    return Buffer.from(await IndySdk.cryptoAnonCrypt(recipientVk, Array.from(messageRaw)))
+    return Buffer.from(await IndySdk.cryptoAnonCrypt(recipientVk, await passBuffer(messageRaw)))
   },
 
   async cryptoAnonDecrypt(wh: WalletHandle, recipientVk: Verkey, encryptedMsg: Buffer): Promise<Buffer> {
     if (Platform.OS === 'ios') {
       return IndySdk.cryptoAnonDecrypt(encryptedMsg, recipientVk, wh)
     }
-    return Buffer.from(await IndySdk.cryptoAnonDecrypt(wh, recipientVk, Array.from(encryptedMsg)))
+    return Buffer.from(await IndySdk.cryptoAnonDecrypt(wh, recipientVk, await passBuffer(encryptedMsg)))
   },
 
   async cryptoAuthCrypt(wh: WalletHandle, senderVk: Verkey, recipientVk: Verkey, messageRaw: Buffer): Promise<Buffer> {
     if (Platform.OS === 'ios') {
       return IndySdk.cryptoAuthCrypt(messageRaw, senderVk, recipientVk, wh)
     }
-    return Buffer.from(await IndySdk.cryptoAuthCrypt(wh, senderVk, recipientVk, Array.from(messageRaw)))
+    return Buffer.from(await IndySdk.cryptoAuthCrypt(wh, senderVk, recipientVk, await passBuffer(messageRaw)))
   },
 
   async cryptoAuthDecrypt(wh: WalletHandle, recipientVk: Verkey, encryptedMsgRaw: Buffer): Promise<[Verkey, Buffer]> {
     if (Platform.OS === 'ios') {
       return IndySdk.cryptoAuthDecrypt(encryptedMsgRaw, recipientVk, wh)
     }
-    const [verkey, msg] = await IndySdk.cryptoAuthDecrypt(recipientVk, Array.from(encryptedMsgRaw))
+    const [verkey, msg] = await IndySdk.cryptoAuthDecrypt(recipientVk, await passBuffer(encryptedMsgRaw))
     return [verkey, Buffer.from(msg)]
   },
 
   async cryptoSign(wh: WalletHandle, signerVk: string, message: Buffer): Promise<Buffer> {
-    return Buffer.from(await IndySdk.cryptoSign(wh, signerVk, Array.from(message)))
+    return Buffer.from(await IndySdk.cryptoSign(wh, signerVk, await passBuffer(message)))
   },
 
   async cryptoVerify(signerVk: string, message: Buffer, signature: Buffer): Promise<Boolean> {
-    return IndySdk.cryptoVerify(signerVk, Array.from(message), Array.from(signature))
+    return IndySdk.cryptoVerify(signerVk, await passBuffer(message), await passBuffer(signature))
   },
 
   async packMessage(
@@ -433,13 +459,13 @@ const indy = {
     senderVk: string | null
   ): Promise<Buffer> {
     if (Platform.OS == 'ios') {
-      return Buffer.from(await IndySdk.packMessage(wh, Array.from(message), JSON.stringify(receiverKeys), senderVk))
+      return Buffer.from(await IndySdk.packMessage(wh, await passBuffer(message), JSON.stringify(receiverKeys), senderVk))
     }
-    return Buffer.from(await IndySdk.packMessage(wh, Array.from(message), receiverKeys, senderVk))
+    return Buffer.from(await IndySdk.packMessage(wh, await passBuffer(message), receiverKeys, senderVk))
   },
 
   async unpackMessage(wh: WalletHandle, jwe: Buffer): Promise<Buffer> {
-    return Buffer.from(await IndySdk.unpackMessage(wh, Array.from(jwe)))
+    return Buffer.from(await IndySdk.unpackMessage(wh, await passBuffer(jwe)))
   },
 
   // pool
