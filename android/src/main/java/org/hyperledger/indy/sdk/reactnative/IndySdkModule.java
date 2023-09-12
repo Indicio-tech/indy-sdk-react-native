@@ -104,36 +104,47 @@ public class IndySdkModule extends ReactContextBaseJavaModule {
         return str;
     }
 
-    private Map<Integer, byte[]> arrays = new ConcurrentHashMap<>();
+    private Map<Integer, ArrayList<byte[]>> arrays = new ConcurrentHashMap<>();
 
     @ReactMethod(isBlockingSynchronousMethod = true)
     public void addArray(Integer arrayId, ReadableArray array){
         byte[] newArray = _readableArrayToBuffer(array);
+        ArrayList<byte[]> arrList;
         if(arrays.containsKey(arrayId)){
-            byte[] current = arrays.get(arrayId);
+            ArrayList<byte[]> current = arrays.get(arrayId);
             assert current != null;
-
-            int arrSize = current.length + newArray.length;
-            byte[] tempArr = new byte[arrSize];
-
-            for(int i = 0; i < arrSize; i++){
-                if(i < current.length){
-                    tempArr[i] = current[i];
-                }else{
-                    tempArr[i] = newArray[i - current.length];
-                }
-            }
-
-            newArray = tempArr;
+            arrList = current;
+        }else {
+            arrList = new ArrayList<>();
         }
+        arrList.add(newArray);
 
-        arrays.put(arrayId, newArray);
+        arrays.put(arrayId, arrList);
     }
 
     private byte[] fetchArray(Integer arrayId){
-        byte[] arr = arrays.get(arrayId);
+        ArrayList<byte[]> arrList = arrays.get(arrayId);
+        assert arrList != null;
+
+        // Loop through all arrays to find how many bytes we have
+        int byteCount = 0;
+        for (byte[] byteArr  : arrList) {
+            byteCount += byteArr.length;
+        }
+
+        // New array for all the bytes
+        byte[] newArr = new byte[byteCount];
+
+        // Add all the bytes to one single array
+        int i = 0;
+        for (byte[] byteArr  : arrList) {
+            for(byte b: byteArr){
+                newArr[i++] = b;
+            }
+        }
+
         arrays.remove(arrayId);
-        return arr;
+        return newArr;
     }
 
     private byte[] _readableArrayToBuffer(ReadableArray arr) {
