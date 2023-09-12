@@ -288,14 +288,13 @@ export type GetNymResponse = {
 
 const { IndySdk } = NativeModules
 
+let currentId: number = 0
 
-let currentId: number = 0;
-
-async function passString(string: string): number{
+async function passString(string: string): number {
   const id = currentId++
   let _string = string
-  while(_string){
-    const pass = _string.substring(0,1000)
+  while (_string) {
+    const pass = _string.substring(0, 1000)
     _string = _string.substring(1000)
     await IndySdk.addString(id, pass)
   }
@@ -303,11 +302,11 @@ async function passString(string: string): number{
 }
 
 // Divide buffers up to 10,000 bytes to prevent malformed JS error on large buffers
-async function passBuffer(buff: Buffer): number{
+async function passBuffer(buff: Buffer): number {
   const id = currentId++
   let _arr = Array.from(buff)
-  while(_arr.length){
-    const pass = _arr.slice(0,10000)
+  while (_arr.length) {
+    const pass = _arr.slice(0, 10000)
     _arr = _arr.slice(10000)
     await IndySdk.addArray(id, pass)
   }
@@ -459,7 +458,9 @@ const indy = {
     senderVk: string | null
   ): Promise<Buffer> {
     if (Platform.OS == 'ios') {
-      return Buffer.from(await IndySdk.packMessage(wh, await passBuffer(message), JSON.stringify(receiverKeys), senderVk))
+      return Buffer.from(
+        await IndySdk.packMessage(wh, await passBuffer(message), JSON.stringify(receiverKeys), senderVk)
+      )
     }
     return Buffer.from(await IndySdk.packMessage(wh, await passBuffer(message), receiverKeys, senderVk))
   },
